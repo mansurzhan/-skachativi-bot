@@ -20,11 +20,27 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 def download_video(url):
     options = {
         "outtmpl": f"{DOWNLOAD_DIR}/%(id)s.%(ext)s",
+
+        # Сначала пробуем готовый MP4
         "format": "best[ext=mp4]/best",
-        "merge_output_format": "mp4",
+
         "noplaylist": True,
         "quiet": True,
         "no_warnings": True,
+
+        # Настройки для YouTube
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android", "web"],
+            }
+        },
+
+        "http_headers": {
+            "User-Agent": (
+                "Mozilla/5.0 (Linux; Android 13) "
+                "AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36"
+            )
+        },
     }
 
     with yt_dlp.YoutubeDL(options) as ydl:
@@ -42,16 +58,11 @@ def download_video(url):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 Привет!\n\n"
-        "Отправь мне ссылку на видео с:\n"
-        "▶️ YouTube\n"
-        "🎵 TikTok\n"
-        "📸 Instagram\n\n"
-        "Я попробую скачать видео и отправить его тебе."
+        "Отправь ссылку на видео с YouTube, TikTok или Instagram."
     )
 
 
 async def download(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
     url = update.message.text.strip()
 
     if not any(
@@ -75,7 +86,6 @@ async def download(update: Update, context: ContextTypes.DEFAULT_TYPE):
     filename = None
 
     try:
-
         filename = await asyncio.to_thread(
             download_video,
             url
@@ -86,23 +96,18 @@ async def download(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         size = os.path.getsize(filename)
 
-        # Ограничение около 49 MB
         if size > 49 * 1024 * 1024:
-
             await message.edit_text(
-                "❌ Видео получилось слишком большим "
-                "для отправки ботом."
+                "❌ Видео слишком большое для отправки."
             )
-
             os.remove(filename)
             return
 
         await message.edit_text(
-            "📤 Отправляю видео..."
+            "📤 Отправляю видео казанбаш..."
         )
 
         with open(filename, "rb") as video:
-
             await update.message.reply_video(
                 video=video,
                 caption="✅ Готово!"
@@ -111,18 +116,15 @@ async def download(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await message.delete()
 
     except Exception as error:
-
         print("ERROR:", error)
 
         await message.edit_text(
-            "❌ Не получилось скачать видео.\n\n"
+            "❌ YouTube не разрешил скачать это видео.\n\n"
             "Попробуй другую ссылку."
         )
 
     finally:
-
         if filename and os.path.exists(filename):
-
             try:
                 os.remove(filename)
             except:
@@ -130,7 +132,6 @@ async def download(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 def main():
-
     if not TOKEN:
         print("BOT_TOKEN не установлен!")
         return
